@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: observability
+  labels:
+    app: loki
+spec:
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: loki
+          image: grafana/loki:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3100
+              name: grpc-loki
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - mountPath: /loki
+              name: loki-pv
+            - mountPath: /etc/loki
+              name: loki-config
+      volumes:
+        - name: loki-pv
+          persistentVolumeClaim:
+            claimName: loki-pvc
+        - name: loki-config
+          configMap:
+            name: loki-local-config
