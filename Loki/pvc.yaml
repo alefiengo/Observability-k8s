@@ -3,9 +3,17 @@ kind: PersistentVolumeClaim
 metadata:
   name: loki-pvc
   namespace: observability
+  labels:
+    app: loki
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/version: "2.9.8"
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: standard
   resources:
     requests:
-      storage: 1Gi
+      storage: 2Gi

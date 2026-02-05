@@ -1,10 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app: prometheus
   name: prometheus
   namespace: observability
+  labels:
+    app: prometheus
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/version: "2.51.2"
 spec:
   selector:
     matchLabels:
@@ -13,25 +18,59 @@ spec:
     metadata:
       labels:
         app: prometheus
+        app.kubernetes.io/name: prometheus
+        app.kubernetes.io/instance: observability
+        app.kubernetes.io/part-of: observability
+        app.kubernetes.io/component: metrics
+        app.kubernetes.io/version: "2.51.2"
     spec:
+      terminationGracePeriodSeconds: 30
       securityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 65534
       containers:
         - name: prometheus
-          image: prom/prometheus:latest
+          image: prom/prometheus:v2.51.2
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 65534
+            capabilities:
+              drop: ["ALL"]
           ports:
-            - containerPort: 9090
-              name: http-prometheus
-          resources: {}
+            - name: http
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
-            - mountPath: /prometheus
-              name: prometheus-pv
-            - mountPath: /etc/prometheus
-              name: prometheus-config
+            - name: prometheus-data
+              mountPath: /prometheus
+            - name: prometheus-config
+              mountPath: /etc/prometheus
       volumes:
-        - name: prometheus-pv
+        - name: prometheus-data
           persistentVolumeClaim:
             claimName: prometheus-pvc
         - name: prometheus-config

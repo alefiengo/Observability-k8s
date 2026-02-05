@@ -3,9 +3,17 @@ kind: PersistentVolumeClaim
 metadata:
   name: prometheus-pvc
   namespace: observability
+  labels:
+    app: prometheus
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/version: "2.51.2"
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: standard
   resources:
     requests:
-      storage: 1Gi
+      storage: 2Gi

@@ -5,6 +5,11 @@ metadata:
   namespace: observability
   labels:
     app: loki
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: logs
+    app.kubernetes.io/version: "2.9.8"
 spec:
   selector:
     matchLabels:
@@ -13,26 +18,59 @@ spec:
     metadata:
       labels:
         app: loki
+        app.kubernetes.io/name: loki
+        app.kubernetes.io/instance: observability
+        app.kubernetes.io/part-of: observability
+        app.kubernetes.io/component: logs
+        app.kubernetes.io/version: "2.9.8"
     spec:
+      terminationGracePeriodSeconds: 30
       securityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 10001
       containers:
         - name: loki
-          image: grafana/loki:latest
+          image: grafana/loki:2.9.8
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
           ports:
-            - containerPort: 3100
-              name: grpc-loki
-              protocol: TCP
-          resources: {}
+            - name: http
+              containerPort: 3100
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3100
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 3100
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           volumeMounts:
-            - mountPath: /loki
-              name: loki-pv
-            - mountPath: /etc/loki
-              name: loki-config
+            - name: loki-data
+              mountPath: /loki
+            - name: loki-config
+              mountPath: /etc/loki
       volumes:
-        - name: loki-pv
+        - name: loki-data
           persistentVolumeClaim:
             claimName: loki-pvc
         - name: loki-config

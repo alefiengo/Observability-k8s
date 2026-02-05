@@ -1,10 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app: grafana
   name: grafana
   namespace: observability
+  labels:
+    app: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: visualization
+    app.kubernetes.io/version: "10.4.2"
 spec:
   selector:
     matchLabels:
@@ -13,44 +18,61 @@ spec:
     metadata:
       labels:
         app: grafana
+        app.kubernetes.io/name: grafana
+        app.kubernetes.io/instance: observability
+        app.kubernetes.io/part-of: observability
+        app.kubernetes.io/component: visualization
+        app.kubernetes.io/version: "10.4.2"
     spec:
+      terminationGracePeriodSeconds: 30
       securityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 472
       containers:
         - name: grafana
-          image: grafana/grafana:latest
+          image: grafana/grafana:10.4.2
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: GF_METRICS_ENABLED
+              value: "true"
           ports:
-            - containerPort: 3000
-              name: http-grafana
-              protocol: TCP
+            - name: http
+              containerPort: 3000
           readinessProbe:
-            failureThreshold: 3
             httpGet:
               path: /robots.txt
               port: 3000
-              scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 30
-            successThreshold: 1
             timeoutSeconds: 2
-          livenessProbe:
             failureThreshold: 3
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            successThreshold: 1
+          livenessProbe:
             tcpSocket:
               port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
             timeoutSeconds: 1
-          resources: {}
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           volumeMounts:
-            - mountPath: /var/lib/grafana
-              name: grafana-pv
-            - mountPath: /etc/grafana/provisioning/datasources
-              name: grafana-config
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+            - name: grafana-config
+              mountPath: /etc/grafana/provisioning/datasources
       volumes:
-        - name: grafana-pv
+        - name: grafana-data
           persistentVolumeClaim:
             claimName: grafana-pvc
         - name: grafana-config

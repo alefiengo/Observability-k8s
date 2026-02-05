@@ -3,10 +3,19 @@ kind: Service
 metadata:
   name: loki
   namespace: observability
+  labels:
+    app: loki
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: logs
+    app.kubernetes.io/version: "2.9.8"
 spec:
+  type: ClusterIP
   selector:
     app: loki
   ports:
-    - protocol: TCP
+    - name: http
       port: 3100
-      targetPort: grpc-loki
+      targetPort: http
+      protocol: TCP

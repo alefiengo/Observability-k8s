@@ -3,9 +3,17 @@ kind: PersistentVolumeClaim
 metadata:
   name: grafana-pvc
   namespace: observability
+  labels:
+    app: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/part-of: observability
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/version: "10.4.2"
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: standard
   resources:
     requests:
       storage: 1Gi
